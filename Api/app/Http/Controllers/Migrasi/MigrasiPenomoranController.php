@@ -228,16 +228,18 @@ class MigrasiPenomoranController extends Controller
             if(!empty($histori->keterangan)){
                 $data_log->catatan = $histori->keterangan;
             }
-            print_r($data_log);exit;
+            
             $this->pdbNew->createPermohonanLog($data_log);
 
             $user = $this->pdbNew->FindMUser($histori->id_personil);
+
             if($user == null){
+            
                 $histori->id_user = 10;
             }
-  
+
             $this->pdbNew->DisposisiStaf($data_perm_new, $histori);    
-            
+             
             $status_akt = $this->pdbOld->GetTableStatusPermohonan($histori->id_status_permohonan);
             
             if(!empty($status_akt->nm_aktivitas_workflow)){
