@@ -72,7 +72,7 @@ class SipppdihatiOldDb extends Model {
         return $result;
     }
     
-    public function FindTableMPenomoran($nomor)
+    public function FindTableMPenomoranPrima($nomor)
     {   
         $result = DB::table('ditjenppi.tbl_m_pertel')
             ->where('nomor', $nomor)
@@ -80,7 +80,47 @@ class SipppdihatiOldDb extends Model {
         return $result;
     }
 
+    
     //DITJENPPI2
+    
+    public function FindTablePenomoranSipppdihati($id_permohonan)
+    {
+        $result = DB::table('ditjenppi2.t_syarat_izin_p')
+            ->where('id_permohonan', $id_permohonan)
+            ->where('id_syarat_izin_s', 104)
+            ->where('id_syarat_izin_p', 423)
+            ->get();
+        return $result;
+    }
+
+    public function getFilePenomoran($id_permohonan)
+    {
+        $result = DB::table('ditjenppi2.t_syarat_izin_f')
+            ->where('id_permohonan', $id_permohonan)
+            ->whereIn('id_syarat_izin_s' , [294, 295, 296, 297, 298, 299])
+            ->get();
+        return $result;
+    }
+
+    public function FindTablePenomoranSipppdihati1($id_permohonan)
+    {
+        $result = DB::table('ditjenppi2.t_syarat_izin_p')
+            ->where('id_permohonan', $id_permohonan)
+            ->where('id_syarat_izin_s', 295)
+            ->first();
+        return $result;
+    }
+
+    public function FindJenisPenomoran ($id_permohonan)
+    {
+        $result = DB::table('ditjenppi2.t_syarat_izin_p')
+            ->where('id_permohonan', $id_permohonan)
+            ->where('id_syarat_izin_s', 104)
+            ->where('id_syarat_izin_p', 422)
+            ->first();
+        return $result;
+    }
+
     public function FindMuserOld($id_user)
     {
         $result = DB::table('ditjenppi2.m_user')
@@ -92,7 +132,17 @@ class SipppdihatiOldDb extends Model {
     public function GetTablePermohonanPenomoranSipppdihati()
     {
         $result = DB::table('ditjenppi2.t_permohonan')
-            ->where('id_jenis_izin', 51)
+            ->leftJoin('ditjenppi2.t_syarat_izin_p', 't_syarat_izin_p.id_permohonan', '=', 't_permohonan.id_permohonan')
+            // ->where('t_syarat_izin_p.id_syarat_izin_s', 295)
+            // ->where('t_permohonan.id_jenis_izin', 51)
+            // ->where('t_permohonan.aktif', 1)
+            
+            ->rightJoin('ditjenppi2.t_izin_terbit', 't_izin_terbit.id_permohonan', '=', 't_permohonan.id_permohonan')
+            ->whereIn('t_izin_terbit.aktif', [1,2])
+            ->where('t_permohonan.id_jenis_izin', 7)
+            ->where('t_syarat_izin_p.id_syarat_izin_p', 423)
+            ->select('t_permohonan.*','t_izin_terbit.no_izin')
+
             ->get();
         return $result;
     }
@@ -103,16 +153,7 @@ class SipppdihatiOldDb extends Model {
             ->first();
         return $result;
     }
-    
-    public function findPenomoran($id_permohonan)
-    {
-        $result = DB::table('ditjenppi2.t_rekom_terbit')
-            ->where('id_permohonan', $id_permohonan)
-            ->where('aktif', 1)
-            ->first();
-        return $result; 
-    }
-    
+
     public function GetTablePermohonanByJaringan()
     {
         $result = DB::table('ditjenppi2.t_permohonan')
@@ -158,8 +199,7 @@ class SipppdihatiOldDb extends Model {
             ->whereIn('t_permohonan.id_jenis_izin', [1, 3, 5])
             ->where('t_permohonan.aktif', 1)
             ->whereIn('t_izin_terbit.aktif', [1,2])
-            ->where('t_permohonan.id_permohonan', 7323)
-            //->whereBetween('t_permohonan.id_permohonan', [78])
+            ->where('t_permohonan.id_permohonan', 1805)
             ->select('t_permohonan.*', 't_izin_terbit.pdf_generate','t_izin_terbit.no_izin')
             ->get();
         return $result;
@@ -483,7 +523,8 @@ class SipppdihatiOldDb extends Model {
         return $result;
     }
 
-    public function GetMediaJaringan($id_permohonan){
+    public function GetMediaJaringan($id_permohonan)
+    {
         $result = DB::table('ditjenppi2.t_syarat_izin_p')
             ->where('id_permohonan', $id_permohonan)
             ->where('id_syarat_izin_s', 183)
@@ -492,7 +533,8 @@ class SipppdihatiOldDb extends Model {
         return $result;
     }
 
-    public function getTableRekomTerbit($histori){
+    public function getTableRekomTerbit($histori)
+    {
 
         $result = DB::table('ditjenppi2.t_rekom_terbit')
             ->where('id_permohonan', $histori->id_permohonan)
@@ -525,15 +567,30 @@ class SipppdihatiOldDb extends Model {
             }
 
         }    
-
         return $result;
+    }
     
+    public function findFlaggingdataCabutPenomoran($id_permohonan){
+        $flagging_data = DB::table('ditjenppi2.t_flagging_data')
+            ->where('id_permohonan', $id_permohonan)
+            ->where('id_flagging_izin', 33)
+            ->first();
+        return $flagging_data;    
+    }
+    
+    public function findRekomTerbit($id_permohonan){
+        $result = DB::table('ditjenppi2.t_rekom_terbit')
+            ->where('id_permohonan', $id_permohonan)
+            ->where('aktif', 1)
+            ->first();
+        return $result; 
     }
 
     public function getFlaggingdata($id_permohonan){
         $flagging_data = DB::table('ditjenppi2.t_flagging_data')
             ->where('id_permohonan', $id_permohonan)
-            ->get();
+            ->whereIn('id_flagging_izin', [24, 28, 29, 38])
+            ->first();
         return $flagging_data;    
     }
 

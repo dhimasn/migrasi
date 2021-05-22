@@ -317,6 +317,7 @@ class MigrasiJasaController extends Controller
             $data_log->tanggal_input = '';
             $data_log->catatan = '';
             $data_log->id_user = '';
+            
             if(!empty($histori->id_aktivitas_workflow)){
                 $t_aktivitas_workflow = $this->pdbOld->GetTableAktivitasWorkFlow($histori->id_aktivitas_workflow);
                 if(!empty($t_aktivitas_workflow)){                                   
@@ -375,7 +376,7 @@ class MigrasiJasaController extends Controller
             }
                             
             #p_sk_pencabutan
-            if(in_array($histori->id_aktivitas_workflow, [33, 38, 43, 52, 61, 67, 75, 83, 98, 103, 104, 112, 126, 159, 176, 187, 215, 237, 263])){
+            if(in_array($histori->id_aktivitas_workflow, [33, 38, 43, 52, 55, 61, 67, 75, 83, 98, 103, 104, 112, 126, 142, 159, 176, 187, 215, 237, 263])){
 
                 $rekom_terbit = $this->pdbOld->getTableRekomTerbit($histori);
                 if(!empty($rekom_terbit)){

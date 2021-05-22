@@ -43,6 +43,7 @@ class MigrasiPosController extends Controller
         DB::beginTransaction();
         try {
             $dataLama = $this->pdbOld->GetTablePermohonanbyPos();
+            
             if(!empty($dataLama)){
                 foreach($dataLama as $data){
                     

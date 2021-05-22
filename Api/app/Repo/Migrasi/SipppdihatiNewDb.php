@@ -25,14 +25,6 @@ class SipppdihatiNewDb extends Model {
         return $result;
     }
 
-    public function FindMPenomoranTel($id_layanan)
-    {
-        $result = DB::table('m_penomoran_tel')
-            ->where('id_layanan', $id_layanan)
-            ->first();
-        return $result;
-    }
-
     public function GetTableMDataNib($id_data_nib)
     {
         $q = sprintf("SELECT * from m_data_nib where id = $id_data_nib");
@@ -322,7 +314,6 @@ class SipppdihatiNewDb extends Model {
        
         $result = DB::table('p_permohonan')
             ->where('no_penyelenggaraan', $data->no_permohonan)
-            ->where('id_izin_jenis',$data->id_jenis_izin)
             ->first();
         return $result;
         
@@ -421,6 +412,82 @@ class SipppdihatiNewDb extends Model {
         return $result;
     }
 
+    public function UpdatePenomoranTel($nomor)
+    {
+        $result = array();
+
+        $m_penomoran_tel_list = DB::table('m_penomoran_tel_list')
+            ->where('nomor', $nomor)
+            ->limit(1)
+            ->update(['id_penomoran_status' => 1]);
+
+        if($m_penomoran_tel_list){
+           
+            $result = $this->GetPenomoranTelList($nomor);
+        
+        } 
+
+        return $result;
+    }
+
+    public function createPenomoranTel($nomor, $id_m_penomoran_tel)
+    {
+        $result = array();
+
+        $m_penomoran  = DB::table('m_penomoran_tel_list')->insert([
+            'id_penomoran_tel'=> $id_m_penomoran_tel,
+            'id_penomoran_status' => 1,             
+            'nomor'=> $nomor,
+        ]);
+
+        if($m_penomoran){
+            $result = $this->GetPenomoranTelList($nomor);
+        }
+
+        return $result;
+    }
+
+    public function CreatePermohonanPenomoranTel($id_permohonan, $id_penomoran_tel)
+    {
+        $result = array();
+
+        $m_penomoran  = DB::table('p_permohonan_penomoran_tel')->insert([
+            'id_permohonan'=> $id_permohonan,
+            'id_penomoran_tel' => $id_penomoran_tel,
+        ]);
+
+        if($m_penomoran){
+            $result = $this->GetPermohonanPenomoranTelandIdpenomoran($id_permohonan, $id_penomoran_tel);
+        }
+
+        return $result;
+
+    }
+
+    public function GetPermohonanPenomoranTel($id_permohonan)
+    {
+        $result = DB::table('p_permohonan_penomoran_tel')
+            ->where('id_permohonan', $id_permohonan)
+            ->first();
+        return $result;
+    }
+
+    public function GetPermohonanPenomoranTelandIdpenomoran($id_permohonan, $id_penomoran_tel ){
+        $result = DB::table('p_permohonan_penomoran_tel')
+            ->where('id_permohonan', $id_permohonan)
+            ->where('id_penomoran_tel', $id_penomoran_tel)
+            ->first();
+        return $result;
+    }
+
+    public function FindNewJenisPenomoran($jns_pnmr)
+    {
+        $result = DB::table('m_penomoran_tel')
+            ->where('jenis_penomoran','like', '%'.$jns_pnmr.'%')
+            ->first();
+        return $result;
+    }
+
     public function UpdateDisposi($id_permohonan, $id_user){
         $result = DB::table('p_permohonan_disposisi')
               ->where('id_permohonan', $id_permohonan)->limit(1)->update(['id_user' => $id_user]);
@@ -433,23 +500,25 @@ class SipppdihatiNewDb extends Model {
         return $result;
     }
 
-    public function GetPenomoranTelList($id_penomoran_tel, $nomor, $status_penomoran){
+    public function GetPenomoranTelList($nomor){
         $result = DB::table('m_penomoran_tel_list')
-            ->where('id_penomoran_tel', $id_penomoran_tel)
             ->where('nomor', $nomor)
-            ->where('id_penomoran_status', $status_penomoran)
             ->first();
         return $result;
     }
 
-    public function GetPenomoranTelPakai($id_m_penomoran_tel_list,$data,$nomor,$status_pnmr)
+    public function GetPenomoranTelPakai($nomor)
     {
         $result = DB::table('p_penomoran_tel_pakai')
-            ->where('id_penomoran_tel_list', $id_m_penomoran_tel_list)
-            ->where('id_perusahaan', $data->id_perusahaan)
-            ->where('id_penomoran_status', $status_pnmr)
             ->where('no_sk_penomoran', $nomor)
-            ->where('id_permohonan', $data->id_permohonan)
+            ->first();
+        return $result;
+    }
+
+    public function  GetPenomoranTelPakaiById($id)
+    {
+        $result = DB::table('p_penomoran_tel_pakai')
+            ->where('id', $id)
             ->first();
         return $result;
     }
@@ -758,7 +827,17 @@ class SipppdihatiNewDb extends Model {
         return $result;
     }
 
-    public function createPencabutanFile($rekom,$base64,$flagging_data){
+    public function CreateBerkasKelengkapanPenomoran($id, $file_name, $base64)
+    {
+        $result = DB::table('p_permohonan_penomoran_kelengkapan_file')->insert([
+            'id_permohonan_penomoran_kelengkapan' => $id,
+            'nama' => $file_name,
+            'stream' => $base64,
+        ]);
+        return $result;
+    }
+
+    public function createPencabutanFile($rekom, $base64, $flagging_data){
         $result = DB::table('p_sk_pencabutan')->insert([
             'id_permohonan' => $rekom->id_permohonan,
             'no_sk_cabut' => $flagging_data->text,
@@ -766,6 +845,45 @@ class SipppdihatiNewDb extends Model {
             'stream' => $base64,
             'tanggal_input' => $rekom->tgl_terbit,
         ]);
+        return $result;
+    }
+
+    public function createPskPencabutanPenomoran($rekom, $base64, $flagging_data, $id_penomoran_tel_pakai){
+        $result = DB::table('p_sk_penomoran_pencabutan')->insert([
+            'id_penomoran_tel_pakai' => $id_penomoran_tel_pakai,
+            'no_sk_cabut' => $flagging_data->text,
+            'nama' => $rekom->filename,
+            'stream' => $base64,
+            'tanggal_input' => $rekom->tgl_terbit,
+        ]);
+        return $result;
+    }
+
+    public function createPermohonanPenomoranKelengkapan($id_penomoran_tel,$id_permohnohonan_kelengkapan,$status)
+    {
+        $result = null;
+
+        $nomor_klgkpn = DB::table('p_permohonan_penomoran_kelengkapan')->insert([
+            'id_permohonan_penomoran_tel' => $id_penomoran_tel,
+            'id_penomoran_kelengkapan' => $id_permohnohonan_kelengkapan,
+            'id_permohonan_komit_kelengkapan_status' => $status,
+        ]);
+
+        
+        if($nomor_klgkpn){
+            $result = $this->GetPermohonanPenomoranKelengkapan($id_penomoran_tel, $id_permohnohonan_kelengkapan, $status);
+        }
+
+        return $result;
+    }
+
+    public function GetPermohonanPenomoranKelengkapan($id_penomoran_tel, $id_permohnohonan_kelengkapan, $status)
+    {
+        $result = DB::table('p_permohonan_penomoran_kelengkapan')
+            ->where('id_permohonan_penomoran_tel', $id_penomoran_tel)
+            ->where('id_penomoran_kelengkapan',$id_permohnohonan_kelengkapan)
+            ->where('id_permohonan_komit_kelengkapan_status', $status)
+            ->first();
         return $result;
     }
 
@@ -943,7 +1061,23 @@ class SipppdihatiNewDb extends Model {
         return $result;
     }
 
+    public function updatePenomoranTelPakai($p_penomoran_tel_pakai, $flagging_data){
+        
+        $result = array();
+        
+        $result = DB::table('p_penomoran_tel_pakai')
+              ->where('id', $p_penomoran_tel_pakai->id)
+              ->update(['no_sk_penomoran' => $flagging_data->text]);
+        
+        if(!empty($result)){
+            $result = $this->GetPenomoranTelPakaiById($p_penomoran_tel_pakai->id);
+        }
+     
+        return $result;
+    }
+
     public function UpdateBuktiBayar($id_permohonan){
+
         // $result = DB::table('p_permohonan_pos_bukti_bayar_file')
         //       ->where('id_permohonan', $id_permohonan)
         //       ->update(['status' => 1]);
@@ -951,6 +1085,7 @@ class SipppdihatiNewDb extends Model {
 
         $q = sprintf("UPDATE p_permohonan_pos_bukti_bayar_file set status='%d' where id_permohonan=%d", 1, $id_permohonan);
         $a = DB::update($q);
+
     }
 
     public function UpdatePermohonan($data_perm_new, $aktif){
@@ -1109,10 +1244,16 @@ class SipppdihatiNewDb extends Model {
     public function createPermohonanPenomoran($data){
 
         $result = array();
+
+        if(!empty($data->no_izin)){
+            $no_izin = $data->no_izin;
+        }else{
+            $no_izin = $data->no_izin_ref;
+        }
        
         $p_permohonan = DB::table('p_permohonan')->insert([
             'no_penyelenggaraan' => $data->no_permohonan,
-            'no_sk_izin' => $data->no_izin_ref,
+            'no_sk_izin' => $no_izin,
             'id_izin_jenis' => $data->id_jenis_izin,
             'id_perusahaan' => $data->id_perusahaan,
             'id_permohonan_status' => $data->aktif,
@@ -1130,7 +1271,7 @@ class SipppdihatiNewDb extends Model {
     {
         $result = DB::table('p_permohonan')
                 ->where('no_penyelenggaraan',$data->no_permohonan)
-                ->where('no_sk_izin',$data->no_izin_ref)
+                //->where('no_sk_izin',$data->no_izin_ref)
                 ->where('id_izin_jenis',$data->id_jenis_izin)
                 ->where('id_perusahaan',$data->id_perusahaan)
                 ->where('id_permohonan_status',$data->aktif)
@@ -1140,37 +1281,40 @@ class SipppdihatiNewDb extends Model {
     }
 
     public function CreateMpenomoranTellist($id_penomoran_tel, $nomor, $status_penomoran){
-       
-        $result = array();
 
-        $tel_list = DB::table('m_penomoran_tel_list')->insert([
+        $result = DB::table('m_penomoran_tel_list')->insert([
             'id_penomoran_tel' => $id_penomoran_tel,
             'nomor' => $nomor,
             'id_penomoran_status' => $status_penomoran,
         ]);
-
-        if($tel_list){
-            $result = $this->GetPenomoranTelList($id_penomoran_tel, $nomor, $status_penomoran);
-        }
-        
         return $result;
     }
 
-    public function CreatePenomoranTelPakai($m_penomoran_tel_list, $data, $nomor, $status_pnmr){
+    public function CreatePenomoranTelPakai($data, $m_penomoran_tel_list, $no_penetapan){
+       
         $result = array();
 
         $tel_pakai = DB::table('p_penomoran_tel_pakai')->insert([
             'id_penomoran_tel_list' => $m_penomoran_tel_list->id,
             'id_perusahaan' => $data->id_perusahaan,
-            'id_penomoran_status' => $status_pnmr,
-            'no_sk_penomoran' => $nomor,
-            'id_permohonan' => $data->id_permohonan,
+            'id_penomoran_status' => $m_penomoran_tel_list->id_penomoran_status,
+             'no_sk_penomoran' => $no_penetapan,
+            'id_permohonan' => $data->id,
         ]);
 
         if($tel_pakai){
-            $result = $this->GetPenomoranTelPakai($m_penomoran_tel_list->id,$data,$nomor,$status_pnmr);
+            $result = $this->GetPenomoranTelPakai($no_penetapan);
         }
         
+        return $result;
+    }
+
+    public function updateNomorSkPermohonan($id_permohonan, $no_penetapan)
+    {
+        $result = DB::table('p_permohonan')
+            ->where('id', $id_permohonan)
+            ->limit(1)->update(['no_sk_izin' => $no_penetapan]);
+
         return $result;
     }
 

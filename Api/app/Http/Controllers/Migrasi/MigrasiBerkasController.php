@@ -248,17 +248,12 @@ class MigrasiBerkasController extends Controller
     {
 
         //find sk file
-
         $result = null;
 
         $file_name = $rekom->filename;   
-
         $url = $this->berkas().'/data_pencabutan';
-        
         $path = ''.$url.'/'.$file_name.'';
-        
         $type = pathinfo($path, PATHINFO_EXTENSION);
-        
         $data = @file_get_contents($path);
         
         if($data === FALSE){
@@ -269,11 +264,36 @@ class MigrasiBerkasController extends Controller
                 $result = $this->pdbNew->createPencabutanFile($rekom,$base64,$flagging_data);
             }
         }
-
         return $result;
         
     }
 
+    public function CreateSkPencabutanPenomoranFile($rekom, $flagging_data, $id_penomoran_tel_pakai){
+        
+         
+         $result = null;
+        
+         $file_name = $rekom->filename;  
+
+         $url = $this->berkas().'/data_pencabutan';
+         
+         $path = ''.$url.'/'.$file_name.'';
+         
+         $type = pathinfo($path, PATHINFO_EXTENSION);
+         
+         $data = @file_get_contents($path);
+         
+         if($data === FALSE){
+             return $result;
+         }else{
+             $base64 = base64_encode($data);
+             if($base64){
+                 $result = $this->pdbNew->createPskPencabutanPenomoran($rekom, $base64, $flagging_data, $id_penomoran_tel_pakai);
+             }
+         }
+         return $result;
+    }
+    
     public function buktibayar($data, $data_perm_new)
     {
 
@@ -378,11 +398,11 @@ class MigrasiBerkasController extends Controller
     }
 
 
-    public function CreateBerkasSkPenomoran($id_penomoran_tel_pakai, $id_permohonan)
+    public function CreateBerkasSkPenomoran($id_permohonan, $id_penomoran_tel_pakai)
     {
         $result = null;
         
-        $berkas_penomoran = $this->pdbOld->findPenomoran($id_permohonan);
+        $berkas_penomoran = $this->pdbOld->findRekomTerbit($id_permohonan);
 
         if(!empty($berkas_penomoran)){
 
@@ -408,5 +428,37 @@ class MigrasiBerkasController extends Controller
         }
         return $result;       
     }
+
+    public function createBerkasKelengkapanFile($berkas, $id_permohonan_kelengkapan, $p_ppenomoran_tel)
+    { 
+        //create p_Permohonan_penomoran_kelengkapan
+
+        $permohonan_penomoran_klgpn = $this->pdbNew->createPermohonanPenomoranKelengkapan($p_ppenomoran_tel->id_penomoran_tel, $id_permohonan_kelengkapan, 4);
         
+        if(!empty($permohonan_penomoran_klgpn)){
+
+            $result = null;
+
+            $file_name = $berkas->file_name_hash;
+    
+            $url = $this->berkas().'/berkas_permohonan';
+    
+            $path = ''.$url.'/'.$file_name.''; 
+    
+            $type = pathinfo($path, PATHINFO_EXTENSION);
+        
+            $data = @file_get_contents($path);
+    
+            if($data === FALSE){   
+                return $result;
+            }else{
+                $base64 = base64_encode($data);
+
+                if($base64){
+                    $this->pdbNew->CreateBerkasKelengkapanPenomoran( $permohonan_penomoran_klgpn->id, $file_name, $base64);
+                }
+                
+            } 
+        }
+    }
 }
