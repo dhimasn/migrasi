@@ -133,17 +133,64 @@ class SipppdihatiOldDb extends Model {
     {
         $result = DB::table('ditjenppi2.t_permohonan')
             ->leftJoin('ditjenppi2.t_syarat_izin_p', 't_syarat_izin_p.id_permohonan', '=', 't_permohonan.id_permohonan')
-            // ->where('t_syarat_izin_p.id_syarat_izin_s', 295)
-            // ->where('t_permohonan.id_jenis_izin', 51)
-            // ->where('t_permohonan.aktif', 1)
             
-            ->rightJoin('ditjenppi2.t_izin_terbit', 't_izin_terbit.id_permohonan', '=', 't_permohonan.id_permohonan')
-            ->whereIn('t_izin_terbit.aktif', [1,2])
-            ->where('t_permohonan.id_jenis_izin', 7)
-            ->where('t_syarat_izin_p.id_syarat_izin_p', 423)
-            ->select('t_permohonan.*','t_izin_terbit.no_izin')
+            ->where('t_syarat_izin_p.id_syarat_izin_s', 295)
+            ->where('t_permohonan.id_jenis_izin', 51)
+            ->where('t_permohonan.aktif', 1)
+            
+            // ->rightJoin('ditjenppi2.t_izin_terbit', 't_izin_terbit.id_permohonan', '=', 't_permohonan.id_permohonan')
+            // ->whereIn('t_izin_terbit.aktif', [1,2])
+            // ->where('t_permohonan.id_jenis_izin', 7)
+            // ->where('t_syarat_izin_p.id_syarat_izin_p', 423)
+            // ->select('t_permohonan.*','t_izin_terbit.no_izin')
 
             ->get();
+        return $result;
+    }
+
+    public function GetTablePermohonanSipppdb1()
+    {
+        $result = DB::table('sippp_db1.p_permohonan_ok')->get();
+        return $result;
+    }
+
+    public function findTableTnomorSK($data)
+    {
+        $result = DB::table('ditjenppi.tbl_t_nomor_sk')
+            //->where('id_pemohon', $data)
+            ->first();
+        return $result;
+    }
+
+    public function findPpiUsers($data)
+    {
+        $result = DB::table('ditjenppi.ppi_users')
+            ->where('id', $data->user_id)
+            ->first();
+        return $result; 
+    }
+
+    public function TableTtpermohonan($data)
+    {
+        $result = DB::table('ditjenppi.tbl_t_permohonan')
+            ->where('kode', $data->no_penyelenggaraan)
+            ->first();
+        return $result;
+    }
+
+    public function Table_t_nomor_Sk($data)
+    {
+        $result = DB::table('ditjenppi.tbl_t_nomor_sk')
+            ->where('id_permohonan', $data->id_permohonan)
+            ->first();
+        return $result;
+    }
+
+    public function Table_t_izin_penomoran($data)
+    {
+        $result = DB::table('ditjenppi.tbl_t_izin_penomoran')
+            ->where('id_permohonan', $data->id_permohonan)
+            ->first();
         return $result;
     }
 
@@ -161,8 +208,7 @@ class SipppdihatiOldDb extends Model {
             ->where('t_permohonan.id_jenis_izin','=', 6)
             ->where('t_permohonan.aktif','=', 1)
             ->whereIn('t_izin_terbit.aktif', [1,2])
-            ->where('t_permohonan.id_permohonan', 6721)
-            //->whereBetween('t_permohonan.id_permohonan', [6933,7329])
+            //->where('t_permohonan.id_permohonan', 1087)
             ->select('t_permohonan.*', 't_izin_terbit.pdf_generate','t_izin_terbit.no_izin')
             ->get();
         return $result;
@@ -174,8 +220,24 @@ class SipppdihatiOldDb extends Model {
             ->where('t_permohonan.id_jenis_izin','=', 8)
             ->where('t_permohonan.aktif','=',1)
             ->whereIn('t_izin_terbit.aktif', [1,2])
-            ->whereBetween('t_permohonan.id_permohonan', [7177,7333])
+            //->where('t_permohonan.id_permohonan', 6535)
             ->select('t_permohonan.*', 't_izin_terbit.pdf_generate','t_izin_terbit.no_izin')
+            ->get();
+        return $result;
+    }
+
+    public function findPermohonanPrima($no_permohonan){
+      
+        $result = DB::table('ditjenppi.tbl_t_permohonan')
+            ->where('kode', $no_permohonan)
+            ->first();
+        return $result;
+
+    }
+
+    public function findTabelLogPermohonan($old_permohonan){
+        $result = DB::table('ditjenppi.tbl_t_log')
+            ->where('id_permohonan', $old_permohonan->id_permohonan)
             ->get();
         return $result;
     }
@@ -187,7 +249,7 @@ class SipppdihatiOldDb extends Model {
             ->where('t_permohonan.id_jenis_izin','=',7)
             ->where('t_permohonan.aktif','=',1)
             ->whereIn('t_izin_terbit.aktif', [1,2])
-            ->whereBetween('t_permohonan.id_permohonan', [7107,7321])
+            //->whereIn('t_permohonan.id_permohonan', [847, 1728, 6703])
             ->select('t_permohonan.*', 't_izin_terbit.pdf_generate','t_izin_terbit.no_izin')
             ->get();
         return $result;    
@@ -199,7 +261,7 @@ class SipppdihatiOldDb extends Model {
             ->whereIn('t_permohonan.id_jenis_izin', [1, 3, 5])
             ->where('t_permohonan.aktif', 1)
             ->whereIn('t_izin_terbit.aktif', [1,2])
-            ->where('t_permohonan.id_permohonan', 1805)
+            //->whereIn('t_permohonan.id_permohonan', [1835, 6039, 7209])
             ->select('t_permohonan.*', 't_izin_terbit.pdf_generate','t_izin_terbit.no_izin')
             ->get();
         return $result;
@@ -226,6 +288,14 @@ class SipppdihatiOldDb extends Model {
             ->where('id_permohonan',$id_permohonan)
             ->whereIn('aktif', [1, 0])
             ->orderBy('id_histori_permohonan', 'asc')
+            ->get();
+        return $result;
+    }
+
+    public function get_t_log_permohonan($id_permohonan)
+    {
+        $result = DB::table('ditjenppi.tbl_t_log')
+            ->where('id_permohonan',$id_permohonan)
             ->get();
         return $result;
     }
@@ -571,11 +641,11 @@ class SipppdihatiOldDb extends Model {
     }
     
     public function findFlaggingdataCabutPenomoran($id_permohonan){
-        $flagging_data = DB::table('ditjenppi2.t_flagging_data')
+        $result = DB::table('ditjenppi2.t_flagging_data')
             ->where('id_permohonan', $id_permohonan)
             ->where('id_flagging_izin', 33)
             ->first();
-        return $flagging_data;    
+        return $result;    
     }
     
     public function findRekomTerbit($id_permohonan){
@@ -587,11 +657,11 @@ class SipppdihatiOldDb extends Model {
     }
 
     public function getFlaggingdata($id_permohonan){
-        $flagging_data = DB::table('ditjenppi2.t_flagging_data')
+        $result = DB::table('ditjenppi2.t_flagging_data')
             ->where('id_permohonan', $id_permohonan)
             ->whereIn('id_flagging_izin', [24, 28, 29, 38])
             ->first();
-        return $flagging_data;    
+        return $result;    
     }
 
     public function getThistoribyUploadSpm($bayar){
@@ -606,6 +676,15 @@ class SipppdihatiOldDb extends Model {
     public function GetTableNoizinRef($no_sk_izin){
         $result = DB::table('ditjenppi2.t_permohonan')
             ->where('no_izin_ref', $no_sk_izin)
+            ->where('aktif', 1)
+            ->first();            
+        return $result;
+    }
+
+    public function getTablePermohonan($data)
+    {
+        $result = DB::table('ditjenppi2.t_permohonan')
+            ->where('no_permohonan', $data->no_penyelenggaraan)
             ->where('aktif', 1)
             ->first();            
         return $result;

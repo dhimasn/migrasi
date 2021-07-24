@@ -55,7 +55,7 @@ class SipppdihatiNewDb extends Model {
             ->first();
         
         if(empty($perusahaan)){
-            $nama_tanpa_pt = substr($nama_perusahaan,3);
+            $nama_tanpa_pt = substr($nama_perusahaan, 3);
             if($nama_tanpa_pt){
 
                 $perusahaan = DB::table('m_perusahaan')
@@ -83,6 +83,14 @@ class SipppdihatiNewDb extends Model {
                     ->where('id_permohonan_status',$data->aktif)
                     ->where('tanggal_input',$data->tgl_permohonan)
                 ->first();
+        return $result;
+    }
+
+    public function GetPpermohonanTelsusPrima()
+    {
+        $result = DB::table('p_permohonan')
+            ->where('id_izin_jenis', 8)
+            ->get();
         return $result;
     }
 
@@ -145,6 +153,15 @@ class SipppdihatiNewDb extends Model {
                 ->where('id_permohonan', $id_permohonan)
                 ->where('tanggal_input', $data_komit_old->tgl_permohonan)
                 ->where('tanggal_update', $data_komit_old->tgl_permohonan)
+                ->where('id_permohonan_komit_kelengkapan_status', $id_kelengkapan_status)
+            ->first();
+        return $result;
+    }
+
+    public function GetPermohonanKomitmenByNoPermohonan($no_permohonan, $id_permohonan, $id_kelengkapan_status){
+        $result = DB::table('p_permohonan_komit')
+                ->where('no_komitmen', $no_permohonan)
+                ->where('id_permohonan', $id_permohonan)
                 ->where('id_permohonan_komit_kelengkapan_status', $id_kelengkapan_status)
             ->first();
         return $result;
@@ -311,12 +328,42 @@ class SipppdihatiNewDb extends Model {
     }
 
     public function GetDataPenomoranByNoSkIzinandIdIzinJenis($data){
-       
         $result = DB::table('p_permohonan')
             ->where('no_penyelenggaraan', $data->no_permohonan)
             ->first();
         return $result;
         
+    }
+
+    public function GetDataPenomoranByNomor($data)
+    {
+        
+        $result = DB::table('p_permohonan')
+            ->where('no_penyelenggaraan', $data->no_penyelenggaraan)
+            ->first();
+        return $result;
+
+    }
+
+
+    public function CreatePermohonanPenomoranPrima($data)
+    {
+        
+        $p_permohonan = DB::table('p_permohonan')->insert([
+            'no_penyelenggaraan' => $data->no_penyelenggaraan,
+            'no_sk_izin' => $data->no_sk_izin,
+            'id_izin_jenis' => $data->id_izin_jenis,
+            'id_perusahaan' => $data->id_perusahaan,
+            'id_permohonan_status' => $data->id_permohonan_status,
+            'tanggal_input' => $data->tanggal_input
+        ]);
+        
+        if($p_permohonan){
+            $result = $this->GetPpermohonanPenomoranPrima($data);
+        }
+
+        return $result;
+   
     }
 
     public function GetDataPermohonanByNoSkIzinandIdIzinJenis($data){      
@@ -450,7 +497,7 @@ class SipppdihatiNewDb extends Model {
     public function CreatePermohonanPenomoranTel($id_permohonan, $id_penomoran_tel)
     {
         $result = array();
-
+        
         $m_penomoran  = DB::table('p_permohonan_penomoran_tel')->insert([
             'id_permohonan'=> $id_permohonan,
             'id_penomoran_tel' => $id_penomoran_tel,
@@ -523,7 +570,16 @@ class SipppdihatiNewDb extends Model {
         return $result;
     }
 
+    public function findPenomoranTelpakai($id_permohonan)
+    {
+        $result = DB::table('p_penomoran_tel_pakai')
+            ->where('id_permohonan', $id_permohonan)
+            ->first();
+        return $result;
+    }
+
     public function cekLog($data){
+        
         $result = DB::table('p_permohonan_log')
             ->where('id_permohonan', $data->id_permohonan)
             ->where('status', $data->status)
@@ -531,6 +587,7 @@ class SipppdihatiNewDb extends Model {
             ->where('jabatan', $data->jabatan)
             ->first();
         return $result;
+
     } 
 
     public function getPermohonanKomitmenUloProces($syarat_izin_p, $id_mekanisme_ulo, $id_komit_layanan){
@@ -607,14 +664,15 @@ class SipppdihatiNewDb extends Model {
     }
 
     public function createPermohonanLog($data){
-
+        
         if(empty($data->tanggal_input)){
             $data->tanggal_input = date("Y-m-d H:i:s");  
         }
         
         $result = $this->cekLog($data);
 
-        if(empty($result)){
+        if(empty($result)){ 
+            
             $result = DB::table('p_permohonan_log')->insert([
                 'id_permohonan' => $data->id_permohonan,
                 'status' => $data->status,
@@ -623,6 +681,7 @@ class SipppdihatiNewDb extends Model {
                 'tanggal_input' => $data->tanggal_input,
                 'catatan' => $data->catatan
             ]);
+
         }
          
         return $result;
@@ -643,6 +702,26 @@ class SipppdihatiNewDb extends Model {
 
         if(!empty($p_permohonan_komit)){
             $result = $this->GetPermohonanKomitByNoPermohonan($data_komit_old, $id_permohonan, $id_kelengkapan_status);
+        }
+
+        return $result; 
+
+    }
+
+    public function CreatePermohonanKomitmen($data, $id_kelengkapan_status){
+
+        $result = array();
+        
+        $p_permohonan_komit = DB::table('p_permohonan_komit')->insert([
+            'no_komitmen' => $data->no_penyelenggaraan,
+            'tanggal_input' => $data->tanggal_input,
+            'tanggal_update' => $data->tanggal_input,
+            'id_permohonan_komit_kelengkapan_status' => $id_kelengkapan_status,
+            'id_permohonan' => $data->id
+        ]);
+       
+        if(!empty($p_permohonan_komit)){
+            $result = $this->GetPermohonanKomitmenByNoPermohonan($data->no_penyelenggaraan, $data->id, $id_kelengkapan_status);
         }
 
         return $result; 
@@ -1061,6 +1140,13 @@ class SipppdihatiNewDb extends Model {
         return $result;
     }
 
+    public function UpdatePermohonanLog($id_permohonan, $status){
+        $result = DB::table('p_permohonan_log')
+            ->where('id_permohonan', $id_permohonan)->limit(1)
+            ->update(['catatan' => $status]);
+        return $result;
+    }
+
     public function updatePenomoranTelPakai($p_penomoran_tel_pakai, $flagging_data){
         
         $result = array();
@@ -1203,8 +1289,6 @@ class SipppdihatiNewDb extends Model {
         }
     }
 
-
-
     public function DisposisiStafUlo($data_perm_new, $histori){
 
         if(!$this->pdbDisposisiTel->IsExistDisposisiStaf($data_perm_new->id,TypeIzinJenisTel::Ulo)){                        
@@ -1265,6 +1349,7 @@ class SipppdihatiNewDb extends Model {
         }
         
         return $result;
+
     }
 
     public function GetPpermohonanPenomoran($data)
@@ -1276,6 +1361,19 @@ class SipppdihatiNewDb extends Model {
                 ->where('id_perusahaan',$data->id_perusahaan)
                 ->where('id_permohonan_status',$data->aktif)
                 ->where('tanggal_input',$data->tgl_permohonan)
+            ->first();
+        return $result;
+    }
+
+    public function GetPpermohonanPenomoranPrima($data)
+    {
+        $result = DB::table('p_permohonan')
+                ->where('no_penyelenggaraan',$data->no_penyelenggaraan)
+                //->where('no_sk_izin',$data->no_izin_ref)
+                ->where('id_izin_jenis',$data->id_izin_jenis)
+                ->where('id_perusahaan',$data->id_perusahaan)
+                ->where('id_permohonan_status',$data->id_permohonan_status)
+                ->where('tanggal_input',$data->tanggal_input)
             ->first();
         return $result;
     }
@@ -1298,7 +1396,7 @@ class SipppdihatiNewDb extends Model {
             'id_penomoran_tel_list' => $m_penomoran_tel_list->id,
             'id_perusahaan' => $data->id_perusahaan,
             'id_penomoran_status' => $m_penomoran_tel_list->id_penomoran_status,
-             'no_sk_penomoran' => $no_penetapan,
+            'no_sk_penomoran' => $no_penetapan,
             'id_permohonan' => $data->id,
         ]);
 
@@ -1309,12 +1407,11 @@ class SipppdihatiNewDb extends Model {
         return $result;
     }
 
-    public function updateNomorSkPermohonan($id_permohonan, $no_penetapan)
+    public function UpdateNomorSkPermohonanNew($data)
     {
         $result = DB::table('p_permohonan')
-            ->where('id', $id_permohonan)
-            ->limit(1)->update(['no_sk_izin' => $no_penetapan]);
-
+            ->where('id', $data->id_permohonan)
+            ->limit(1)->update(['no_sk_izin' => $data->no_sk_penomoran]);
         return $result;
     }
 

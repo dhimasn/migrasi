@@ -30,7 +30,8 @@ class MigrasiPerusahaanController extends Controller
     }
 
     public function findPerusahaan($data)
-    {   
+    {  
+        
         $m_perusahaan_izin_jenis = $this->pdbNew->GetTablePerusahaanIzinJenis($data->id_data_nib);
         if(!empty($m_perusahaan_izin_jenis)){   
             $m_perusahaan = $this->pdbNew->GetTablePerusahaan($m_perusahaan_izin_jenis->id_perusahaan); 
@@ -54,5 +55,24 @@ class MigrasiPerusahaanController extends Controller
                 }
             }
         }
-    }    
+    }
+    
+    public function normalizeDataPerusahaanPrima($data)
+    {
+        $dataPerusahaan = $this->pdbOld->TableTtpermohonan($data);
+        if(!empty($dataPerusahaan)){
+            
+            $ppi_user = $this->pdbOld->findPpiUsers($dataPerusahaan);
+            if(!empty($ppi_user)){
+                
+                $m_perusahaan = $this->pdbNew->GetTablePerusahaanByname($ppi_user->nama_perusahaan);
+                if(!empty($m_perusahaan)){
+                    $data->id_perusahaan = $m_perusahaan->id;
+                }
+                
+            }
+
+        }
+        
+    }   
 }

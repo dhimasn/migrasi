@@ -429,11 +429,11 @@ class MigrasiBerkasController extends Controller
         return $result;       
     }
 
-    public function createBerkasKelengkapanFile($berkas, $id_permohonan_kelengkapan, $p_ppenomoran_tel)
+    public function createBerkasKelengkapanFile($berkas, $id_permohonan_kelengkapan, $p_penomoran_tel)
     { 
         //create p_Permohonan_penomoran_kelengkapan
 
-        $permohonan_penomoran_klgpn = $this->pdbNew->createPermohonanPenomoranKelengkapan($p_ppenomoran_tel->id_penomoran_tel, $id_permohonan_kelengkapan, 4);
+        $permohonan_penomoran_klgpn = $this->pdbNew->createPermohonanPenomoranKelengkapan($p_penomoran_tel->id, $id_permohonan_kelengkapan, 4);
         
         if(!empty($permohonan_penomoran_klgpn)){
 

@@ -46,13 +46,17 @@ class MigrasiJaringanController extends Controller
             if(!empty($dataLama)){
                 foreach($dataLama as $data){                      
                     $this->perusahaan->findPerusahaan($data);
-                    if(empty($data->id_perusahaan)){
-                        break;
-                    }
-                    $result = $this->CreatePermohonanNew($data);
-                    if($result != null){
-                        $this->CreatePemenuhanKomitmen($data, $result['data_perm_new'],$result['data_layanan_new']);
-                        $this->berkas->CreatePskFile($result['data_perm_new'], $data);
+                    if(!empty($data->id_perusahaan)){
+
+                        $result = $this->CreatePermohonanNew($data);
+                        
+                        if($result != null){
+                        
+                            $this->CreatePemenuhanKomitmen($data, $result['data_perm_new'],$result['data_layanan_new']);
+                        
+                            $this->berkas->CreatePskFile($result['data_perm_new'], $data);
+                        
+                        }
                     }
                 }       
             }

@@ -44,19 +44,26 @@ class MigrasiJasaController extends Controller
             ini_set('MAX_EXECUTION_TIME', '-1');
             ini_set('post_max_size', '4096M');
             ini_set('upload_max_filesize', '4096M');
+
             $dataLama = $this->pdbOld->GetTablePermohonanByJasa();
             if(!empty($dataLama)){
+            
                 foreach($dataLama as $data){
+
                     $this->perusahaan->findPerusahaan($data);
-                    if(empty($data->id_perusahaan)){
-                       break;
+                    if(!empty($data->id_perusahaan)){
+
+                        $result = $this->CreatePermohonanNew($data);
+                        
+                        if($result != null){
+                            $this->CreatePemenuhanKomitmen($data, $result['data_perm_new'], $result['data_layanan_new']);
+                            $this->berkas->CreatePskFile($result['data_perm_new'], $data);
+                        }
+
                     }
-                    $result = $this->CreatePermohonanNew($data);
-                    if($result != null){
-                        $this->CreatePemenuhanKomitmen($data, $result['data_perm_new'], $result['data_layanan_new']);
-                        $this->berkas->CreatePskFile($result['data_perm_new'], $data);
-                    }
+
                 }       
+            
             }
 
         }catch(Exception $ex)
@@ -109,7 +116,6 @@ class MigrasiJasaController extends Controller
 
                         #p_permohonan_layanan
                         $layanan_new = $this->pdbNew->CreatePermohonanLayanan($data_perm_new->id, $id_lyn_new);
-                        $this->CreateSkPenomoran($layanan_new, $data);
                         array_push($data_layanan_new, $layanan_new);
                         
                     }
@@ -129,7 +135,8 @@ class MigrasiJasaController extends Controller
     public function CreatePemenuhanKomitmen($data, $data_perm_new, $data_layanan_new)
     {
         //cek udah mengajukan permohonan komitmen apa belum
-        $permohonan_komit_old = $this->pdbOld->GetTablePermohonanByNoizin($data->no_izin, $data->id_data_nib); 
+        $permohonan_komit_old = $this->pdbOld->GetTablePermohonanByNoizin($data->no_izin, $data->id_data_nib);
+        
         if(!empty($permohonan_komit_old)){                
 
             if($data->aktif == 2){
@@ -147,7 +154,7 @@ class MigrasiJasaController extends Controller
                 //find data layanan new
                 $data_layanan_new = array();
 
-                $jenis_lyn_old = $this->pdbOld->GetTableSyaratIzinPTelsus($permohonan_komit_old->id_permohonan);
+                $jenis_lyn_old = $this->pdbOld->GetTableSyaratIzinPJasa($permohonan_komit_old->id_permohonan);
 
                 if(!$jenis_lyn_old->isEmpty()){
 
@@ -273,7 +280,7 @@ class MigrasiJasaController extends Controller
                 $this->berkas->CreatePuloSklo($permohonan_komit_old, $data_perm_new->id);
 
                 //create sk penetapan komitmen
-                //$this->berkas->CreatePskPenetapanKomitmen($permohonan_komit_old, $data_perm_new->id);
+                $this->berkas->CreatePskPenetapanKomitmen($permohonan_komit_old, $data_perm_new->id);
 
             }
 
@@ -510,6 +517,7 @@ class MigrasiJasaController extends Controller
 
     public function FindJenisLyn($lyn_old)
     {
+        
         switch($lyn_old->nilai_string) {
              case "Teleponi Dasar melalui Jaringan Telekomunikasi":
                 $result = 42;
@@ -544,6 +552,9 @@ class MigrasiJasaController extends Controller
             case "Teleponi Dasar melalui Satelit yang telah memperoleh Hak Labuh (Landing Right)":
                 $result = 43;
                 break;
+            case "Sistem Komunikasi Data":
+                $result = 47;
+                break;
             default:
               $result = null;
         }
@@ -562,35 +573,5 @@ class MigrasiJasaController extends Controller
          if(property_exists($histori,'id_user')){
             $this->pdbNew->DisposisiStafUlo($data_perm_new, $histori);  
         }
-    }
-
-    public function CreateSkPenomoran($layanan_new, $data)
-    {
-        //find jenis penomoran 
-       $m_penomoran_tel = $this->pdbNew->FindMPenomoranTel($layanan_new->id_layanan);
-       if(!empty($m_penomoran_tel)){
-            //find jenis refensi penomoran
-            $tbl_m_pertel = $this->pdbOld->FindBlokPenomoran($data->id_permohonan);
-            if(!empty($tbl_m_pertel)){
-                if($data->aktif == 1){
-                    $status_pnmr = 1;
-                }else{
-                    $status_pnmr = 2;
-                }
-                //create m_penomoran_tel_list
-                $m_penomoran_tel_list = $this->pdbNew->CreateMpenomoranTellist($m_penomoran_tel->id, $tbl_m_pertel->nilai_string, $status_pnmr);
-                if(!empty($m_penomoran_tel_list)){
-                    //find no_sk_penetapan
-                    $nomor = $this->pdbOld->FindTableMPenomoran($tbl_m_pertel->nilai_string);
-                    if(!empty($nomor)){
-                        //create p_penomoran_tel_pakai
-                        $m_tel_pakai = $this->pdbNew->CreatePenomoranTelPakai($m_penomoran_tel_list, $data, $nomor->no_penetapan, $status_pnmr);
-                        //create sk penomoran
-                        $this->berkas->CreateBerkasSkPenomoran($m_tel_pakai->id, $data->id_permohonan);
-                    }
-                }
-            }
-        }
-    }
-    
+    } 
 }

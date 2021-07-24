@@ -34,28 +34,48 @@ class MigrasiPenomoranController extends Controller
         $this->berkas = new MigrasiBerkasController();
     }
 
-    public function MigrasiPenomoran(){
-
+    public function MigrasiPenomoran(Request $re){
+        
+        ini_set('memory_limit', '4096M');
+        ini_set('MAX_EXECUTION_TIME', '-1');
+        ini_set('post_max_size', '4096M');
+        ini_set('upload_max_filesize', '4096M');
+        
         DB::beginTransaction();
+
         try {
-            ini_set('memory_limit', '4096M');
-            ini_set('MAX_EXECUTION_TIME', '-1');
-            ini_set('post_max_size', '4096M');
-            ini_set('upload_max_filesize', '4096M');
 
-            $data_lama = $this->pdbOld->GetTablePermohonanPenomoranSipppdihati();
-            
-            if(!empty($data_lama)){
-                foreach($data_lama as $data){
-                    //if($data->id_permohonan == 1556){
-                        $this->perusahaan->findPerusahaan($data);
-                        if(!empty($data->id_perusahaan)){
-                            $this->CreatePermohonanNew($data);
-                        }
-                    //}
+            if($re == null){
+
+                $data_lama = $this->pdbOld->GetTablePermohonanPenomoranSipppdihati();
+                
+                if(!empty($data_lama)){
+
+                    foreach($data_lama as $data){
+
+                        //if($data->no_permohonan == 'PHN19110802726'){
+
+                            $this->perusahaan->findPerusahaan($data);
+                            if(!empty($data->id_perusahaan)){                          
+                                $this->CreatePermohonanNew($data);
+                                $this->UpdateNomorSkPermohonan($data);                             
+                            }    
+                                         
+                        //}
+
+                    }
                 }
-            }
+            
+            }else{
+                
+                $re = $re->request->all();
+                $this->perusahaan->findPerusahaan($re[0]);
+                if(!empty($re[0]->id_perusahaan)){
+                    $this->CreatePermohonanNew($re[0]);
+                }
 
+            }
+                        
         }
             catch(Exception $ex)
         {
@@ -66,13 +86,31 @@ class MigrasiPenomoranController extends Controller
         return response()->json(['message' => "OK", 'code' => 200]);
     }
 
+    public function UpdateNomorSkPermohonan($data)
+    {
+         $p_permohonan = $this->pdbNew->GetDataPenomoranByNoSkIzinandIdIzinJenis($data);
+
+         if(!empty($p_permohonan)){
+
+            $penomoran_pakai = $this->pdbNew->findPenomoranTelpakai($p_permohonan->id);
+
+            if(!empty($penomoran_pakai)){
+
+                $this->pdbNew->UpdateNomorSkPermohonanNew($penomoran_pakai);
+                
+            }
+
+        }
+
+    }
+
     public function CreatePermohonanNew($data){
 
         
-        $isExist = $this->pdbNew->GetDataPenomoranByNoSkIzinandIdIzinJenis($data);
-        if(!empty($isExist)){
-            return null;
-        }
+        // $isExist = $this->pdbNew->GetDataPenomoranByNoSkIzinandIdIzinJenis($data);
+        // if(!empty($isExist)){
+        //     return null;
+        // }
 
         if($data->id_jenis_izin == 7){
             //penetapan baru
@@ -82,6 +120,7 @@ class MigrasiPenomoranController extends Controller
         if($data->id_jenis_izin == 51){
             //penyesuain kode akses
             $this->penyesuaianKode($data);
+        
         }        
     }
 
@@ -108,7 +147,7 @@ class MigrasiPenomoranController extends Controller
                 $m_pertel = $this->pdbOld->FindTableMPenomoranPrima($kde->nilai_string);
                 if(!empty($m_pertel)){
 
-                    if($m_pertel->no_penetapan != "520 Tahun 2014"){
+                    //if($m_pertel->no_penetapan != "520 Tahun 2014"){
 
                         $m_penomoran_tel_list = $this->pdbNew->UpdatePenomoranTel($kde->nilai_string);                   
                         if(empty($m_penomoran_tel_list)){
@@ -118,12 +157,13 @@ class MigrasiPenomoranController extends Controller
 
                         //p_permohonan_penomoran_tel
                         $p_penomoran_tel = $this->pdbNew->CreatePermohonanPenomoranTel($data_perm_new->id, $m_penomoran_tel_list->id_penomoran_tel);
+                        
                         if(!empty($p_penomoran_tel)){
 
                             if(!empty($status)){
 
                                 //Find No penetapan
-                                if($status['data_aktif'] == 2){
+                                if($status == 2){
                                     
                                     //flagging data pencabutan
                                     $flagging_data = $this->pdbOld->findFlaggingdataCabutPenomoran($data->id_permohonan);
@@ -139,17 +179,13 @@ class MigrasiPenomoranController extends Controller
 
                             
                             
-                            if(!empty($flagging_data)){
+                            if(!empty($data_perm_new->no_penyelenggaraan /*$flagging_data*/)){
 
                                 //P PENOMORAN TEL PAKAI
-                                $p_penomoran_tel_pakai = $this->pdbNew->CreatePenomoranTelPakai($data_perm_new, $m_penomoran_tel_list, $flagging_data->text);
+                                $p_penomoran_tel_pakai = $this->pdbNew->CreatePenomoranTelPakai($data_perm_new, $m_penomoran_tel_list, $data_perm_new->no_penyelenggaraan  /*$flagging_data->text*/);
                                 if(!empty($p_penomoran_tel_pakai)){
 
-                                    if(!empty($status['histori_aktif'])){
-
-                                        $this->GetSkPenomoranAndPencabutan($status['histori_aktif'], $p_penomoran_tel_pakai, $data_perm_new, $status['data_aktif'], $data->id_permohonan);
-
-                                    }
+                                   $this->GetSkPenomoranAndPencabutan($p_penomoran_tel_pakai, $data_perm_new, $status, $data->id_permohonan);
 
                                 }
 
@@ -162,16 +198,15 @@ class MigrasiPenomoranController extends Controller
                             if(!empty($data_histori)){
 
                                 #data histori
-                                $this->CreateHistoriPermohonan($data_histori, $data_perm_new);
+                                $this->CreateHistoriPermohonan($data_histori, $data_perm_new, 'Baru');
 
                             }
                         }
                         
-                    }else{
-                       
-                        $this->pdbNew->UpdatePenomoranTel($kde->nilai_string);
-                    
-                    } 
+                    // }else{
+                    //     $this->pdbNew->UpdatePenomoranTel($kde->nilai_string);
+                    // } 
+
                 }
             }
         }
@@ -197,7 +232,7 @@ class MigrasiPenomoranController extends Controller
 
             if(!empty($m_pertel)){
 
-                if($m_pertel->no_penetapan != "520 Tahun 2014"){
+                //if($m_pertel->no_penetapan != "520 Tahun 2014"){
 
                     $m_penomoran_tel_list = $this->pdbNew->UpdatePenomoranTel($kde->nilai_string);
                     if(empty($m_penomoran_tel_list)){
@@ -214,7 +249,7 @@ class MigrasiPenomoranController extends Controller
                         if(!empty($status)){
 
                             //Find No penetapan
-                            if($status['data_aktif'] == 2){
+                            if($status == 2){
                                     
                                 //flagging data pencabutan
                                 $flagging_data = $this->pdbOld->findFlaggingdataCabutPenomoran($data->id_permohonan);
@@ -227,19 +262,16 @@ class MigrasiPenomoranController extends Controller
                             }
                         }
                       
-                        if(!empty($flagging_data)){
+                        if(!empty($data_perm_new->no_penyelenggaraan /*$flagging_data*/)){
                         
                             //P PENOMORAN TEL PAKAI
-                            $p_penomoran_tel_pakai = $this->pdbNew->CreatePenomoranTelPakai($data_perm_new, $m_penomoran_tel_list, $flagging_data->text);
+                            $p_penomoran_tel_pakai = $this->pdbNew->CreatePenomoranTelPakai($data_perm_new, $m_penomoran_tel_list, $data_perm_new->no_penyelenggaraan /*$flagging_data->text*/);
                         
                             if(!empty($p_penomoran_tel_pakai)){
 
-                                if(!empty($status['histori_aktif'])){
-
-                                    $this->GetSkPenomoranAndPencabutan($status['histori_aktif'], $p_penomoran_tel_pakai, $data_perm_new, $status['data_aktif'], $data->id_permohonan);
-
-                                }
+                                $this->GetSkPenomoranAndPencabutan($p_penomoran_tel_pakai, $data_perm_new, $status, $data->id_permohonan);
                             }
+
                         }
 
                         //upload file berkas penomoran
@@ -252,7 +284,9 @@ class MigrasiPenomoranController extends Controller
                                 $klngpn_file = $this->findMsyaratS($bks_pnmrn);
                                 
                                 if(!empty($klngpn_file)){
+
                                     $this->berkas->createBerkasKelengkapanFile($bks_pnmrn, $klngpn_file, $p_penomoran_tel);
+                                
                                 }
 
                             }
@@ -264,17 +298,16 @@ class MigrasiPenomoranController extends Controller
                         if(!empty($data_histori)){
                             
                             #data histori
-                            $this->CreateHistoriPermohonan($data_histori, $data_perm_new);
+                            $this->CreateHistoriPermohonan($data_histori, $data_perm_new, 'Tambahan');
                         
                         } 
 
                     }
 
-                }else{
+                // }else{
+                //     $this->pdbNew->UpdatePenomoranTel($kde->nilai_string);
+                // }
 
-                    $this->pdbNew->UpdatePenomoranTel($kde->nilai_string);
-               
-                }
             }
         }
     }
@@ -282,7 +315,7 @@ class MigrasiPenomoranController extends Controller
     public function GetstatusPermohonan($data)
     {
         //define 
-        $result = array();
+        $result = null;
 
         $histori_aktif = $this->pdbOld->GetTableHistoriPermohonanAktf($data->id_permohonan);
 
@@ -296,53 +329,62 @@ class MigrasiPenomoranController extends Controller
                 $data->aktif = 0;
             }
 
-            $result['histori_aktif'] = $histori_aktif->id_aktivitas_workflow;
-            $result['data_aktif'] = $data->aktif;
-             
-        }
-
-        return $result; 
-    }
-
-
-    public function GetSkPenomoranAndPencabutan($histori_aktif, $p_penomoran_tel_pakai, $data_perm_new, $data_aktif, $id_permohonan){
-
-        if(in_array($histori_aktif, [33, 38, 43, 52, 55, 61, 67, 75, 83, 98, 103, 104, 112, 126, 142, 159, 176, 187, 215, 237, 263])){
-    
-            $flagging_data = $this->pdbOld->findFlaggingdataCabutPenomoran($id_permohonan);  
-            if(!empty($flagging_data)){
-
-                $rekom = $this->pdbOld->findRekomTerbit($id_permohonan);
-                if(!empty($rekom)){
-
-                    //p_sk_penomoran_pencabutan
-                    $this->berkas->CreateSkPencabutanPenomoranFile($rekom, $flagging_data, $p_penomoran_tel_pakai->id);
-
-                }
-            }        
-        }
-
-       
-        if(in_array($histori_aktif,[28, 84, 111, 3, 15, 19, 24, 31, 36, 41, 59, 65, 72, 80, 94, 122, 137, 154, 174, 185, 191, 211, 233, 259])){
-
-            $flagging_data = $this->pdbOld->getFlaggingdata($id_permohonan);  
-            if(!empty($flagging_data)){
-
-                //p_sk_penomoran_file
-                $this->berkas->CreateBerkasSkPenomoran($id_permohonan, $p_penomoran_tel_pakai->id);
+            //$result['histori_aktif'] = $histori_aktif->id_aktivitas_workflow;
             
-            }
+            return $data->aktif; 
         
         }
 
-        $this->pdbNew->UpdatePermohonan($data_perm_new, $data_aktif);
+        return $result; 
+        
+    }
+
+
+    public function GetSkPenomoranAndPencabutan($p_penomoran_tel_pakai, $data_perm_new, $data_aktif, $id_permohonan){
+
+        $histori_aktif = $this->pdbOld->GetTableHistoriPermohonanAktf($id_permohonan);
+
+        if(!empty($histori_aktif))
+        {
+           
+            if(in_array($histori_aktif->id_aktivitas_workflow, [33, 38, 43, 52, 55, 61, 67, 75, 83, 98, 103, 104, 112, 126, 142, 159, 176, 187, 215, 237, 263])){
+    
+                $flagging_data = $this->pdbOld->findFlaggingdataCabutPenomoran($id_permohonan);  
+                if(!empty($flagging_data)){
+    
+                    $rekom = $this->pdbOld->findRekomTerbit($id_permohonan);
+                    if(!empty($rekom)){
+    
+                        //p_sk_penomoran_pencabutan
+                        $this->berkas->CreateSkPencabutanPenomoranFile($rekom, $flagging_data, $p_penomoran_tel_pakai->id);
+    
+                    }
+                }        
+            }
+    
+           
+            if(in_array($histori_aktif->id_aktivitas_workflow,[28, 84, 111, 3, 15, 19, 24, 31, 36, 41, 59, 65, 72, 80, 94, 122, 137, 154, 174, 185, 191, 211, 233, 259])){
+    
+                $flagging_data = $this->pdbOld->getFlaggingdata($id_permohonan);  
+                if(!empty($flagging_data)){
+    
+                    //p_sk_penomoran_file
+                    $this->berkas->CreateBerkasSkPenomoran($id_permohonan, $p_penomoran_tel_pakai->id);
+                
+                }
+            
+            }
+    
+            $this->pdbNew->UpdatePermohonan($data_perm_new, $data_aktif);
+
+        }
 
     }
 
 
 
 
-    public function CreateHistoriPermohonan($data_histori, $data_perm_new){
+    public function CreateHistoriPermohonan($data_histori, $data_perm_new, $catatan){
 
         foreach($data_histori as $histori){
 
@@ -384,10 +426,14 @@ class MigrasiPenomoranController extends Controller
             if(!empty($histori->waktu_in)){
                 $data_log->tanggal_input = $histori->waktu_in;
             }
-
             
             if(!empty($histori->catatan)){
                 $data_log->catatan = $histori->catatan;
+            }
+
+            if($data_log->status == 'Selesai' || $data_log->status == 'Upload Pemenuhan Komitmen'){
+                $data_log->status = 'Izin Berlaku Efektif';
+                $data_log->catatan = $catatan;
             }
 
             //create p permohonan log
@@ -439,3 +485,6 @@ class MigrasiPenomoranController extends Controller
        return $result;
     }
 }
+
+
+

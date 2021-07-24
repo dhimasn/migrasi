@@ -46,19 +46,25 @@ class MigrasiTelsusController extends Controller
 
             if(!empty($dataLama)){
                 
-                foreach($dataLama as $data){     
+                foreach($dataLama as $data){   
+
                     $this->perusahaan->findPerusahaan($data);
-                    if(empty($data->id_perusahaan)){
-                        break;
-                    }
-                    $result = $this->CreatePermohonanNew($data);
-                    if($result != null){
-                        $this->CreatePemenuhanKomitmen($data, $result['data_perm_new'],$result['data_layanan_new']);
-                        $this->berkas->CreatePskFile($result['data_perm_new'], $data);
-                    }        
-                }       
+
+                    if(!empty($data->id_perusahaan)){
+
+                        $result = $this->CreatePermohonanNew($data);
+                        if($result != null){
+                            $this->CreatePemenuhanKomitmen($data, $result['data_perm_new'],$result['data_layanan_new']);
+                            $this->berkas->CreatePskFile($result['data_perm_new'], $data);
+                        } 
+
+                    }  
+
+                }  
+                     
             }
-        }catch(Exception $ex)
+        }
+            catch(Exception $ex)
         {
             DB::rollBack();
             throw $ex;
@@ -556,6 +562,122 @@ class MigrasiTelsusController extends Controller
             
             $this->pdbNew->DisposisiStafUlo($data_perm_new, $histori);
 
+        }
+    }
+
+    public function MigrasiTelsusPrima(Request $re)
+    {
+        ini_set('memory_limit', '4096M');
+        ini_set('MAX_EXECUTION_TIME', '-1');
+        ini_set('post_max_size', '4096M');
+        ini_set('upload_max_filesize', '4096M');
+        DB::beginTransaction();
+        try {
+
+            $dataLama = $this->pdbNew->GetPpermohonanTelsusPrima();
+
+            if(!empty($dataLama)){
+                
+                foreach($dataLama as $data){ 
+
+                    if($data->no_penyelenggaraan == "SUSULO002308"){
+
+                        
+                        $this->CreatePermohonanKomitmenPrima($data);   
+
+                    }
+                }  
+            }
+        }
+            catch(Exception $ex)
+        {
+            DB::rollBack();
+            throw $ex;
+        }
+        DB::commit();
+        return response()->json(['message' => "OK", 'code' => 200]);
+    }
+
+    public function CreatePermohonanKomitmenPrima($data){
+        
+        $old_permohonan = $this->pdbOld->findPermohonanPrima($data->no_penyelenggaraan);
+       
+        if(!empty($old_permohonan)){
+
+            //find log permohonan
+            $t_log_permohonan = $this->pdbOld->findTabelLogPermohonan($old_permohonan);
+            
+            if(!empty($t_log_permohonan))
+            {
+                if($t_log_permohonan[0]->id_personil == 0){
+
+                    //create p_permohonan_komitmen
+                    if($data->id_permohonan_status == 2){
+                        $id_kelengkapan_status = 3;
+                    }else if($data->id_permohonan_status == 1){
+                        $id_kelengkapan_status = 4;
+                    }
+                   
+                    $p_komitmen = $this->pdbNew->CreatePermohonanKomitmen($data, $data->id, $id_kelengkapan_status);
+                    
+                    if(!empty($p_komitmen)){
+                        
+                        //get p_permohonan_layanan
+                        $p_permohonan_layanan = $this->pdbNew->GetPermohonanLayanan($data->id);
+                        if(!empty($p_permohonan_layanan))
+                        {
+                            //create p_permohonan_komit_layanan
+                            $p_permohonan_komit_layanan = $this->pdbNew->CreatePermohonanKommitlayanan($p_komitmen->id, $p_permohonan_layanan->id);
+                            if(!empty($p_permohonan_komit_layanan)){
+
+                                    //find tbl_t_berkas_persyaratan
+                                    $this->pdbNew->findTableBerkasPersyaratan();
+
+                                    //find_k_komit_kelengkapan
+
+                                    
+                                    //macth tabel persyaratan 
+                                    
+                            }
+                        }
+                    }
+                }
+
+                foreach($t_log_permohonan as $log_permohonan)
+                {
+                
+                    //find_personil
+                    $personil = $this->pdbOld->GetTablePersonil($log_permohonan->id_personil);
+
+                    //find_jabataan
+                    $jabatan  = $this->pdbOld->GetTableJabatan($log_permohonan->id_jabatan);
+
+                    //assign data log permohonan
+                    $data_log = (object)array(
+
+                        'id_permohonan' => $data->id,
+                        'status' => $log_permohonan->id_status_permohonan,
+                        'nama' => $personil->nama,
+                        'jabatan' => $jabatan->jabatan,
+                        'tanggal_input' => $log_permohonan->created,
+                        'catatan' => $log_permohonan->keterangan
+
+                    );
+
+                    //create p_permohonan_log
+                    $this->pdbNew->createPermohonanLog($data_log);
+
+                    $perm_info = $this->pdbNew->getPermohonanInfo($data->id);
+            
+                    if($perm_info == null){
+                        #p_permohonan_info    
+                        $this->pdbNew->CreatePermohonanInfo($data, $log_permohonan->created, $log_permohonan->id_status_permohonan);
+                    }else{
+                        #update p_permohonan_info
+                        $this->pdbNew->UpdatePermohonanInfo($data, $log_permohonan->created, $log_permohonan->id_status_permohonan);
+                    }
+                }
+            }
         }
     }
 }

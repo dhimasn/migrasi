@@ -42,6 +42,7 @@ class MigrasiBerkasJasaController extends Controller
 
             #p_permohonan
             $data_permohonan = $this->pdbNew->GetPermohonanNewByIdjenisIzin(3);
+            
             if(!empty($data_permohonan)){
 
                 foreach($data_permohonan as $data_perm_new){

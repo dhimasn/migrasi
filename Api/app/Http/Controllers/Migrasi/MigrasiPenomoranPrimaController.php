@@ -10,6 +10,7 @@ use App\Repo\PermohonanInfoDb;
 use App\Repo\Migrasi\SipppdihatiOldDb;
 use App\Repo\Migrasi\SipppdihatiNewDb;
 use App\Repo\Tel\PermohonanDisposisiTelDb;
+use DateTime;
 use Exception;
 use GuzzleHttp\Promise\Create;
 use Illuminate\Support\Facades\DB;
@@ -22,249 +23,188 @@ class MigrasiPenomoranPrimaController extends Controller
 {
     private $pdbOld;
     private $pdbNew;
-    private $pdbDisposisiTel;
+    private $perusahaan;
+    private $berkas; 
+    private $Migrasi;
     public function __construct()
     {
         #base_url
         $this->pdbOld = new SipppdihatiOldDb();
         $this->pdbNew = new SipppdihatiNewDb();
+        $this->perusahaan = new MigrasiPerusahaanController();
         $this->pdbDisposisiTel = new PermohonanDisposisiTelDb();
+        $this->berkas = new MigrasiBerkasController();
+        $this->Migrasi = new MigrasiPenomoranController();
     }
 
-    /*public function MigrasiPenomoranPrima(){
+    public function MigrasiPenomoranPrima(){
 
         DB::beginTransaction();
         try {
-            $data_lama = $this->pdbOld->GetTablePermohonanPenomoran();
+
+            ini_set('memory_limit', '4096M');
+            ini_set('MAX_EXECUTION_TIME', '-1');
+            ini_set('post_max_size', '4096M');
+            ini_set('upload_max_filesize', '4096M');
+
+            $data_lama = $this->pdbOld->GetTablePermohonanSipppdb1();
+        
             if(!empty($data_lama)){
+
                 foreach($data_lama as $data){
 
-                    if($data->id_permohonan == 2103){
-
-                        find data perusahaan
-                        $m_perusahaan_izin_jenis = $this->pdbNew->GetTablePerusahaanIzinJenis($data->id_data_nib);
-                        if(!empty($m_perusahaan_izin_jenis)){
-                                
-                            $m_perusahaan = $this->pdbNew->GetTablePerusahaan($m_perusahaan_izin_jenis->id_perusahaan); 
-                            if(!empty($m_perusahaan)){
-                                $data->id_perusahaan = $m_perusahaan->id;
-                            }else{
-                                #temporary
-                                $data->id_perusahaan = 1;
-                            }
-
-                        }else{
-                            #temporary
-                            $data->id_perusahaan = 1;
-                        }
-
-                        $data = $this->CreatePermohonanNew($data);
-
+                    if(substr($data->no_penyelenggaraan, 0, 1) == 'N'){ 
+                        $this->CreatePermohonanNewSipppDb($data);
                     }
-
+                    
+                    if(substr($data->no_penyelenggaraan, 0, 1) == 'P'){
+                        $this->CreatePermohonanNewSipppdihati($data);
+                    }
                 }
             }
-        }catch(Exception $ex)
+        }
+            catch(Exception $ex)
         {
             DB::rollBack();
             throw $ex;
         }
-        DB::commit();
-        return response()->json(['message' => "OK", 'code' => 200]);
-    }
-
-    public function CreatePermohonanNew($data){
-
-        $data_perm_new = array();
-
-        //data id jenis izin
-        $data->id_jenis_izin = 5;
-
-        $isExist = $this->pdbNew->GetDataPenomoranByNoSkIzinandIdIzinJenis($data);
-
-        if(!empty($isExist)){
-            return $data_perm_new;
-        }
-
-        $this->GetstatusPermohonan($data);
-       
-        #p_permohonan
-        $data_perm_new = $this->pdbNew->createPermohonanPenomoran($data);
         
-        $t_histori_permohonan = $this->pdbOld->GetTableHistoriLogPenomoran($data->id_permohonan);                                          
-        if(!empty($t_histori_permohonan)){
-            #p_histori_permohonan
-            $this->CreateHistoriPermohonan($t_histori_permohonan, $data_perm_new);
-        }
+        DB::commit();
+        return response()->json(['message' => "OK", 'code' => 200]);  
+    }
 
-        $sub_jenis_izin = $this->pdbOld->FindNewSubJenisIzin($data);
-        if(!empty($sub_jenis_izin)){
+    public function CreatePermohonanNewSipppDb($data)
+    {
 
-            $jenis_izin = $this->pdbNew->FindMPenomoranTel($sub_jenis_izin->nm_sub_jenis_izin);
-            if(empty($jenis_izin)){
+        $this->perusahaan->normalizeDataPerusahaanPrima($data);
+
+        // $isExist = $this->pdbNew->GetDataPenomoranByNomor($data);
+
+        // if(!empty($isExist)){
+
+        //     return null;
+        
+        // }else{
+
+        
+            if($data->tanggal_input == date('0000-00-00 00:00:00')){                                             
+                $data->tanggal_input = null;
+            }
+
+            //create p_permohonan_penomoran
+            $p_permohonan_penomoran = $this->pdbNew->CreatePermohonanPenomoranPrima($data);
+            if(!empty($p_permohonan_penomoran)){
+
+                //find tbl_t_permohonan
+                $tbl_t_permohonan = $this->pdbOld->TableTtpermohonan($data);
                 
-                $jenis_izin_penomoran = $this->FindMpenomoran($sub_jenis_izin->nm_sub_jenis_izin);
+                if(!empty($tbl_t_permohonan)){
+                             
+                    //find tbl_t_izin_penomoran
+                    $tbl_t_izin_penomoran = $this->pdbOld->Table_t_izin_penomoran($tbl_t_permohonan);
+                    if(!empty($tbl_t_izin_penomoran)){
 
-            }
+                        //find m penomoran tel list
+                        $m_nomor_tel_list = $this->pdbNew->GetPenomoranTelList($tbl_t_izin_penomoran->nomor);
 
-           $penomoran = $this->pdbOld->FindTableMPenomoran($data);
+                        // if(empty($m_penomoran_tel_list)){
+                        //     //m penomoran tel list 
+                        //     $m_penomoran_tel_list = $this->pdbNew->createPenomoranTel($tbl_t_izin_penomoran->nomor, $m_pertel->id_jns_penomoran);
+                        // }
 
-            if(empty($penomoran)){
-                $this->pdbNew->CrateMpenomoranTel($data, $jenis_izin, $penomoran);
-            }
+                        if(!empty($m_nomor_tel_list))
+                        {
+                            
+                            //create p_penomoran_tel_pakai
+                            $this->pdbNew->CreatePenomoranTelPakai($p_permohonan_penomoran, $m_nomor_tel_list, $tbl_t_izin_penomoran->no_penetapan);
+                           
+                            //create p_permohonan_penomoran_tel
+                            $this->pdbNew->CreatePermohonanPenomoranTel($p_permohonan_penomoran->id, $m_nomor_tel_list->id_penomoran_tel);
+                           
+                            #histori and log permohonan
+                            $data_histori = $this->pdbOld->get_t_log_permohonan($tbl_t_permohonan->id_permohonan);   
+                            
+                            if(!empty($data_histori)){
+                                
+                                foreach($data_histori as $his){
+                                    
+                                    $data  = (object) array('jabatan'=> '',
+                                                'nama'=> '',
+                                                'status' => '',
+                                                'id_permohonan' => '',
+                                                'tanggal_input' => '',
+                                                'catatan' => '');
+                                            
+                                    //status permohonan
+                                    $status = $this->pdbOld->GetTableStatusPermohonan($his->id_status_permohonan);
+                                    if(!empty($status)){
 
-        }
+                                        //personil permohonan
+                                        $personil = $this->pdbOld->GetTablePersonil($his->id_personil);
+                                        if(!empty($personil)){
 
-        #p_penomoran_tel_pakai
-        $this->pdbNew->CreatePenomoranTelPakai($data);
+                                            $jabatan = $this->pdbOld->GetTableJabatan($his->id_jabatan);
+                                            $data->nama  = $personil->nama;
+                                            $data->jabatan  = $jabatan->jabatan;
 
-        return $data_perm_new;  
+                                            if($status->status == 'Selesai' || $status->status == 'Upload Pemenuhan Komitmen'){
+                                                $status->status = 'Izin Berlaku Efektif';
+                                            }
     
-    }
+                                            if($his->created == date('0000-00-00 00:00:00')){                                             
+                                                $his->created = null;                                        
+                                            }
 
-    public function FindMPenomoran($nm_sub_jenis_izin)
-    {
-        switch($nm_sub_jenis_izin) {
-            case "Kode Wilayah + Blok Nomor":
-                $result = null;
-                break;
-           case "NDC (National Destination code)":
-                $result = null;
-                break;
-           case "SPC (Signalling Point Code)":
-                $result = null;
-                break;
-           case "ISPC (International Signalling Point Code)":
-                $result = null;
-                break;    
-           case "PLMNID (Public Land Mobile Network Identity)":
-                $result = null;
-                break;
-           case "Intelligent Network":
-                $result = null;
-                break;
-           case "Kode Akses SLJJ":
-                $result = null;
-                break;
-           case "Kode Akses SLI":
-                $result = null;
-                break;
-           case "Kode Akses Call Center":
-                $result = null;
-                break;
-           case "Kode Akses Calling Card":
-                $result = null;
-                break;
-           case "Kode Akses ITKP":
-                $result = null;
-                break;
-           case "Kode Akses Konten":
-                $result = null;
-                break;
-           case "Kode Akses Layanan Masyarakat (Layanan Suara)":
-                $result = null;
-                break;
-           case "Kode Akses Layanan Masyarakat (Pesan Singkat)":
-                $result = null;
-                break;
-           default:
-                $result = null;
-       }
-       return $result;
-    }
+                                            $data->id_permohonan = $p_permohonan_penomoran->id;
+                                            $data->tanggal_input = $his->created;
+                                            $data->catatan = '';
+                                            $data->status = $status->status; 
+ 
+                                            #create p permohonan log
+                                            $this->pdbNew->createPermohonanLog($data);
 
-    public function GetstatusPermohonan($data)
-    {
-
-        $histori_aktif = $this->pdbOld->GetTableLogPenomoran($data);
-       
-        if(in_array($histori_aktif[0]->id_status_permohonan, [25])){
-            $data->aktif = 1;
-        }else{
-            $data->aktif = 0;
-        }
-
-    }
-
-    public function CreateHistoriPermohonan($data_histori, $data_perm_new){
-
-        foreach($data_histori as $histori){
-
-            $data_log =  new stdClass();
-            $data_log->status = '';
-            $data_log->nama = '';
-            $data_log->jabatan = '';
-            $data_log->id_permohonan = '';
-            $data_log->tanggal_input = '';
-            $data_log->catatan = '';
-            $data_log->id_user = '';
-
-            if(!empty($histori->id_status_permohonan)){
-                $status_permohonan = $this->pdbOld->GetTableStatusPermohonan($histori->id_status_permohonan);
-                if($status_permohonan != null){
-                    $data_log->status = $status_permohonan->status;
-                } 
-            }
-
+                                            $perm_info = $this->pdbNew->getPermohonanInfo($p_permohonan_penomoran->id);
+                                
+                                            if($perm_info == null){
             
-            if($histori->id_personil){
-                $m_personil = $this->pdbOld->GetTablePersonil($histori->id_personil); 
-                if(!empty($m_personil))
-                {
-                    $data_log->nama = $m_personil->nama;
-                    $jabatan = $this->pdbOld->GetTableJabatan($m_personil->id_jabatan);
-                    if(!empty($m_role))
-                    {
-                        $data_log->jabatan = $jabatan->jabatan;
+                                            //p_permohonan_info    
+                                            $this->pdbNew->CreatePermohonanInfo($p_permohonan_penomoran, $his->created, $status->status);
+            
+                                            }else{
+            
+                                                //update p_permohonan_info
+                                                $this->pdbNew->UpdatePermohonanInfo($p_permohonan_penomoran, $his->created, $status->status);
+                                            
+                                            }
+                                        }
+                                    }   
+                                }
+                            }
+                        }                      
                     }
                 }
             }
-            
-            
-            if(!empty($data_perm_new)){
-                $data_log->id_permohonan = $data_perm_new->id;
-            }else{
-                #temporary
-                $data_log->id_permohonan = 3;
-            }
+        
+        //}
+   
+    }
 
-            
-            if(!empty($histori->created)){
-                $data_log->tanggal_input = $histori->created;
-            }
 
-            
-            if(!empty($histori->keterangan)){
-                $data_log->catatan = $histori->keterangan;
-            }
+    public function CreatePermohonanNewSipppdihati($old_data)
+    {
+        //find t_permohonan by no_permohonan
+        $re = $this->pdbOld->getTablePermohonan($old_data);
+       
+        if(!empty($re)){
+            $re->no_izin_ref = $old_data->no_sk_izin;
+            $objetoRequest = new \Illuminate\Http\Request();
+            $objetoRequest->setMethod('GET');
+            $objetoRequest->request->add([$re]);
+            $this->Migrasi->MigrasiPenomoran($objetoRequest);
 
-            $this->pdbNew->createPermohonanLog($data_log);
+        } 
 
-            $user = $this->pdbNew->FindMUser($histori->id_personil);
-            if($user == null){
-                $histori->id_user = 10;
-            }
-  
-            $this->pdbNew->DisposisiStaf($data_perm_new, $histori);    
-            
-            $status_akt = $this->pdbOld->GetTableStatusPermohonan($histori->id_status_permohonan);
-            
-            if(!empty($status_akt->nm_aktivitas_workflow)){
-                $perm_info = $this->pdbNew->getPermohonanInfo($data_perm_new->id);
-                if(empty($perm_info)){
-                    $this->pdbNew->CreatePermohonanInfo($data_perm_new, $histori->waktu_in, $status_akt->status); 
-                }
-            }
-                                        
-            #p_sk_penomoran_pencabutan
-            if(in_array($histori->id_status_permohonan,[29,31,32,33,35,36,37,38,39,42,44,48])){
-                        
-            }
-            
-            #p_sk_penomoran_file
-            if(in_array($histori->id_status_permohonan,[])){
+    }
+    
 
-            }
-        }
-    }*/
 }

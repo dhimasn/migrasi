@@ -42,6 +42,7 @@ class MigrasiPosController extends Controller
         ini_set('upload_max_filesize', '4096M');
         DB::beginTransaction();
         try {
+            
             $dataLama = $this->pdbOld->GetTablePermohonanbyPos();
             
             if(!empty($dataLama)){
