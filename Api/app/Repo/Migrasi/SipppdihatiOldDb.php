@@ -32,6 +32,14 @@ class SipppdihatiOldDb extends Model {
 
     }
 
+    public function GetTableBerkasPersyaratan($id_permohonan)
+    {
+        $result = DB::table('ditjenppi.tbl_t_berkas_persyaratan')
+            ->where('id_permohonan', $id_permohonan)
+            ->get();
+        return $result;
+    }
+
     public function GetTableHistoriLogPenomoran($id_permohonan)
     {
         $result = DB::table('ditjenppi.tbl_t_log')
@@ -76,6 +84,14 @@ class SipppdihatiOldDb extends Model {
     {   
         $result = DB::table('ditjenppi.tbl_m_pertel')
             ->where('nomor', $nomor)
+            ->first();
+        return $result;
+    }
+
+    public function findPermohonanLog($id_status_permohonan)
+    {
+        $result = DB::table('ditjenppi.tbl_m_status_permohonan')
+            ->where('id_status_permohonan', $id_status_permohonan)
             ->first();
         return $result;
     }

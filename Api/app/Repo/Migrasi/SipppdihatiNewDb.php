@@ -968,21 +968,31 @@ class SipppdihatiNewDb extends Model {
 
     public function CreatePermohonanKomitKelengkapan($id_permohonan_komit_layanan, $id_jenis_kelengkapan, $id_permohonan_k_kelengkapan_status)
     {
-        $result = null;
 
-        $permohonanKomitKelengkapan = DB::table('p_permohonan_komit_kelengkapan')->insert([
-            'id_permohonan_komit_layanan' => $id_permohonan_komit_layanan,
-            'id_jenis_kelengkapan' => $id_jenis_kelengkapan,
-            'id_permohonan_komit_kelengkapan_status' => $id_permohonan_k_kelengkapan_status,
-        ]);
+        $permohonanKomitKelengkapan = $this->GetPermohonaKomitKelengkapanbyIdPermohonanKomitLayanan($id_permohonan_komit_layanan, $id_jenis_kelengkapan, $id_permohonan_k_kelengkapan_status);
 
-        
-        if($permohonanKomitKelengkapan){
-            $result = $this->GetPermohonaKomitKelengkapanbyIdPermohonanKomitLayanan($id_permohonan_komit_layanan, $id_jenis_kelengkapan, $id_permohonan_k_kelengkapan_status);
-        }
+        if(empty($permohonanKomitKelengkapan)){
 
-        return $result;
+            $permohonanKomitKelengkapan = DB::table('p_permohonan_komit_kelengkapan')->insert([
+                'id_permohonan_komit_layanan' => $id_permohonan_komit_layanan,
+                'id_jenis_kelengkapan' => $id_jenis_kelengkapan,
+                'id_permohonan_komit_kelengkapan_status' => $id_permohonan_k_kelengkapan_status,
+            ]);
+
+            if($permohonanKomitKelengkapan){
+
+                $result = $this->GetPermohonaKomitKelengkapanbyIdPermohonanKomitLayanan($id_permohonan_komit_layanan, $id_jenis_kelengkapan, $id_permohonan_k_kelengkapan_status);
+           
+            }
     
+        }else{
+            
+            $result = null;
+
+        }
+               
+        return $result;
+
     }
 
     public function CreatePermohonanKomitKelengkapanPos($id_permohonan_komit_layanan, $id_jenis_kelengkapan, $id_permohonan_k_kelengkapan_status){
@@ -1026,14 +1036,30 @@ class SipppdihatiNewDb extends Model {
 
     public function createPermmohonanKomitKelengkapanFile($id_permohonan_komit_kelengkapan, $file_name_asli, $base64){
 
-        $result = DB::table('p_permohonan_komit_file')->insert([
-            'id_Permohonan_komit_kelengkapan' => $id_permohonan_komit_kelengkapan,
-            'nama'=> $file_name_asli,
-            'stream' => $base64,
-        ]);
-        
+        $berkasFile = $this->GetKomitKelengkapanFile($id_permohonan_komit_kelengkapan, $file_name_asli);
+
+        if(empty($berkasFile)){
+
+            $berkasFile = DB::table('p_permohonan_komit_file')->insert([
+                'id_Permohonan_komit_kelengkapan' => $id_permohonan_komit_kelengkapan,
+                'nama'=> $file_name_asli,
+                'stream' => $base64,
+            ]);
+
+        }
+
+        return $berkasFile;
+   
+    }
+
+    public function GetKomitKelengkapanFile($id_permohonan_komit_kelengkapan, $file_name_asli){
+        $result = DB::table('p_permohonan_komit_file')
+            ->where('id_Permohonan_komit_kelengkapan', $id_permohonan_komit_kelengkapan)
+            ->where('nama',$file_name_asli)
+            ->first();
         return $result;
     }
+
 
     public function createPermmohonanKomitKelengkapanFilePos($id_permohonan_komit_kelengkapan, $file_name_asli, $base64){
 

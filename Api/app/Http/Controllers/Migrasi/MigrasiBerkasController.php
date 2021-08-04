@@ -461,4 +461,37 @@ class MigrasiBerkasController extends Controller
             } 
         }
     }
+
+    public function CreatePermohonanKomitKelengkapanTelsus($syarat_komitmen, $id_permohonan_komit_kelengkapan , $location)
+    {
+        //find file komit
+        $result = null;
+
+        $data = @file_get_contents($location);
+
+        if($syarat_komitmen->nama_berkas == null){
+            
+            return $result;
+        
+        }
+
+        if($data === FALSE){
+
+            return $result;
+
+        }else{
+
+            $base64 = base64_encode($data);
+
+            if($base64){
+
+                $result = $this->pdbNew->createPermmohonanKomitKelengkapanFile($id_permohonan_komit_kelengkapan, $syarat_komitmen->nama_berkas, $base64);
+            
+            }
+            
+        }                
+           
+        return $result;
+               
+    }
 }

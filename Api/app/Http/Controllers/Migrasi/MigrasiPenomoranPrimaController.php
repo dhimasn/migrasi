@@ -79,14 +79,10 @@ class MigrasiPenomoranPrimaController extends Controller
         $this->perusahaan->normalizeDataPerusahaanPrima($data);
 
         // $isExist = $this->pdbNew->GetDataPenomoranByNomor($data);
-
         // if(!empty($isExist)){
-
         //     return null;
-        
         // }else{
 
-        
             if($data->tanggal_input == date('0000-00-00 00:00:00')){                                             
                 $data->tanggal_input = null;
             }
@@ -184,9 +180,9 @@ class MigrasiPenomoranPrimaController extends Controller
                     }
                 }
             }
-        
+
         //}
-   
+
     }
 
 

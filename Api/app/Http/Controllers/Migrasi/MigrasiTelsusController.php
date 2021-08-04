@@ -573,19 +573,12 @@ class MigrasiTelsusController extends Controller
         ini_set('upload_max_filesize', '4096M');
         DB::beginTransaction();
         try {
-
             $dataLama = $this->pdbNew->GetPpermohonanTelsusPrima();
-
             if(!empty($dataLama)){
-                
                 foreach($dataLama as $data){ 
-
-                    if($data->no_penyelenggaraan == "SUSULO002308"){
-
-                        
+                    //if($data->no_penyelenggaraan == "SUSULO002308"){
                         $this->CreatePermohonanKomitmenPrima($data);   
-
-                    }
+                    //}
                 }  
             }
         }
@@ -609,6 +602,7 @@ class MigrasiTelsusController extends Controller
             
             if(!empty($t_log_permohonan))
             {
+               
                 if($t_log_permohonan[0]->id_personil == 0){
 
                     //create p_permohonan_komitmen
@@ -630,14 +624,17 @@ class MigrasiTelsusController extends Controller
                             $p_permohonan_komit_layanan = $this->pdbNew->CreatePermohonanKommitlayanan($p_komitmen->id, $p_permohonan_layanan->id);
                             if(!empty($p_permohonan_komit_layanan)){
 
-                                    //find tbl_t_berkas_persyaratan
-                                    $this->pdbNew->findTableBerkasPersyaratan();
+                                //find tbl_t_berkas_persyaratan
+                                $berkasPersyaratan = $this->pdbOld->GetTableBerkasPersyaratan($old_permohonan->id_permohonan);
+                            
+                                //find_k_komit_kelengkapan
+                                $k_komit_kelengkapan = $this->pdbNew->GetKomitKelengkapan($p_permohonan_layanan->id_layanan);
+                                
+                                if(!empty($berkasPersyaratan)){
 
-                                    //find_k_komit_kelengkapan
+                                    $this->matchPersyaratan($p_permohonan_komit_layanan, $berkasPersyaratan, $k_komit_kelengkapan, $p_permohonan_layanan);
 
-                                    
-                                    //macth tabel persyaratan 
-                                    
+                                }      
                             }
                         }
                     }
@@ -646,17 +643,21 @@ class MigrasiTelsusController extends Controller
                 foreach($t_log_permohonan as $log_permohonan)
                 {
                 
+                   
                     //find_personil
                     $personil = $this->pdbOld->GetTablePersonil($log_permohonan->id_personil);
 
                     //find_jabataan
                     $jabatan  = $this->pdbOld->GetTableJabatan($log_permohonan->id_jabatan);
 
+                    //find tbl_m_permohonan_log
+                    $status_log = $this->pdbOld->findPermohonanLog($log_permohonan->id_status_permohonan);
+                   
                     //assign data log permohonan
                     $data_log = (object)array(
 
                         'id_permohonan' => $data->id,
-                        'status' => $log_permohonan->id_status_permohonan,
+                        'status' => $status_log->status,
                         'nama' => $personil->nama,
                         'jabatan' => $jabatan->jabatan,
                         'tanggal_input' => $log_permohonan->created,
@@ -671,13 +672,81 @@ class MigrasiTelsusController extends Controller
             
                     if($perm_info == null){
                         #p_permohonan_info    
-                        $this->pdbNew->CreatePermohonanInfo($data, $log_permohonan->created, $log_permohonan->id_status_permohonan);
+                       
+                        $this->pdbNew->CreatePermohonanInfo($data, $log_permohonan->created, $status_log->status);
                     }else{
                         #update p_permohonan_info
-                        $this->pdbNew->UpdatePermohonanInfo($data, $log_permohonan->created, $log_permohonan->id_status_permohonan);
+                        $this->pdbNew->UpdatePermohonanInfo($data, $log_permohonan->created, $status_log->status);
                     }
                 }
             }
         }
+    }
+
+    public function matchPersyaratan($p_permohonan_komit_layanan, $berkasPersyaratan, $k_komit_kelengkapan, $p_permohonan_layanan){
+        
+       foreach($berkasPersyaratan as $persyaratan){
+           
+            $location = str_replace('https://www.pelayananprimaditjenppi.go.id/components/com_chronoforms5/chronoforms/uploads', 'D:/backup-htdocs/database_sipppdihati/new_sipppdihati', $persyaratan->url_berkas);
+
+            foreach($k_komit_kelengkapan as $k_kelengkapan){
+              
+                $id_jenis_kelengkapan =  $this->matchMaking($persyaratan);
+
+                if(!empty($id_jenis_kelengkapan)){
+
+                     //create p_permohonan_komit_kelengkapan
+                     $p_komit_klgnpn = $this->pdbNew->CreatePermohonanKomitKelengkapan($p_permohonan_komit_layanan->id, $id_jenis_kelengkapan , 2);
+
+                     if($p_komit_klgnpn != null){
+                    
+                        //create p_permohonan_komit_file
+                        $this->berkas->CreatePermohonanKomitKelengkapanTelsus($persyaratan, $p_komit_klgnpn->id , $location);
+    
+                    }
+                }                
+            }
+        }    
+    }
+
+    public function matchMaking($persyaratan){
+
+        switch($persyaratan->nama_berkas) {
+
+            case "Data Dukung Tambahan":
+               $result = 460;
+               break;
+           case "Formulir Permohonan":
+               $result = 459;
+               break;
+           case "Struktur Organisasi":
+               $result = 458;
+               break;
+           case "Izin Prinsip":
+               $result = 452;
+               break;    
+           case "Bukti Kepemilikan Perangkat":
+               $result = 461;
+               break;
+           case "Daftar perangkat telekomunikasi yang digunakan":
+               $result = 462;
+               break;
+           case "Salinan sertifikasi perangkat dari Ditjen SDPPI":
+               $result = 456;
+               break;
+           case "Kelengkapan Administrasi Lain":
+               $result = 463;
+               break;
+           case "BHP dan ISR":
+               $result = 464;
+               break;
+           case "Topologi Jaringan":
+               $result = 465;
+               break;
+           default:
+             $result = null;
+
+       }
+       return $result;
     }
 }
