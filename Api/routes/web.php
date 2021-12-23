@@ -29,6 +29,7 @@ $router->get('/migrasi_berkas_khusus','Migrasi\MigrasiBerkasKhususController@Mig
 $router->get('/migrasi_berkas_jasa','Migrasi\MigrasiBerkasJasaController@MigrasiBerkasJasa');
 $router->get('/migrasi_berkas_pos','Migrasi\MigrasiBerkasPosController@MigrasiBerkasPos');
 $router->get('/migrasi_telsus_prima','Migrasi\MigrasiTelsusController@MigrasiTelsusPrima');
+$router->get('/migrasi_sortir','Migrasi\MigrasiSortirController@Sortirfile');
 
 //route migrasi data nib
 $router->get('/migrasi_nib', 'OssController@nibLama');

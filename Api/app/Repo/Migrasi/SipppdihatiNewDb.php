@@ -12,10 +12,45 @@ use PhpParser\Node\Expr\FuncCall;
 class SipppdihatiNewDb extends Model {
     
     protected $connection = 'mysql';
-    private $pdbDisposisiTel;
+    private 
+    $pdbDisposisiTel;
     public function __construct()
     {
         $this->pdbDisposisiTel = new PermohonanDisposisiTelDb();
+    }
+
+    public function getTableSk(){
+        $result = DB::table('2018-2021')
+            ->get();
+        return $result;
+    }
+
+    public function getTableSk2021(){
+        $result = DB::table('2021')
+            ->get();
+        return $result;
+    }
+
+
+    public function getTableSkizinFile($nama){
+        $result = DB::table('p_sk_izin_file')
+                    ->where('nama', $nama)
+                    ->first();
+        return $result; 
+    }
+
+    public function getTableSPenetapanFile($nama){
+        $result = DB::table('p_sk_penetapan_komit_file')
+                    ->where('nama', $nama)
+                    ->first();
+        return $result; 
+    }
+
+    public function getTableSkloFile($nama){
+        $result = DB::table('p_sk_ulo_file')
+                    ->where('nama', $nama)
+                    ->first();
+        return $result; 
     }
 
     public function FindMUser($id_user){
@@ -1484,6 +1519,8 @@ class SipppdihatiNewDb extends Model {
         return $result;
 
     }
+
+   
 
     
 }
