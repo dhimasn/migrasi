@@ -43,7 +43,6 @@ class MigrasiSortirController extends Controller
     
         //sk_izin
         //$data_sk = $this->pdbNew->getTableSk();
-
         // if(!empty($data_sk)){
         //     foreach($data_sk as $dt_sk){
         //         //data izin
@@ -73,46 +72,51 @@ class MigrasiSortirController extends Controller
         // } 
 
         //get data sk 2021
-        $data_sk2021 = $this->pdbNew->getTableSk2021();
-
-        if(!empty($data_sk2021)){
-            foreach($data_sk2021 as $dt_sk){
-                
-               
-                $get_sk_izin = $this->pdbNew->getTableSkizinFile($dt_sk->Izin_PDF);
+        //$data_sk2021 = $this->pdbNew->getTableSk2021();
+        //if(!empty($data_sk2021)){
+            //foreach($data_sk2021 as $dt_sk){
+                //$get_sk_izin = $this->pdbNew->getTableSkizinFile($dt_sk->Izin_PDF);
                 // Convert blob (base64 string) back to PDF
                 //if (!empty($get_sk_izin->stream)) {
                     //$base64data = base64_decode($get_sk_izin->stream, true);
-                    //$file_path  = "{$folder}/{$file_name}";
-            
+                    
                     //Return the number of bytes saved, or false on failure
                     //$result = file_put_contents("D:/berkas/sk_izin_21/$get_sk_izin->nama", $base64data);
                 //}
-
-               
-                $get_sk_izin = $this->pdbNew->getTableSPenetapanFile($dt_sk->Penetapan_Komitmen);
+                //$get_sk_izin = $this->pdbNew->getTableSPenetapanFile($dt_sk->Penetapan_Komitmen);
                 // Convert blob (base64 string) back to PDF
                 //if (!empty($get_sk_izin->stream)) {
                     //$base64data = base64_decode($get_sk_izin->stream, true);
-                    //$file_path  = "{$folder}/{$file_name}";
-            
+                    
                     //Return the number of bytes saved, or false on failure
                     //$result = file_put_contents("D:/berkas/sk_komitmen_21/$get_sk_izin->nama", $base64data);
                 //}
-
-                $get_sk_izin = $this->pdbNew->getTableSkloFile($dt_sk->SKLO);
+                //$get_sk_izin = $this->pdbNew->getTableSkloFile($dt_sk->SKLO);
                 // Convert blob (base64 string) back to PDF
-                if (!empty($get_sk_izin->stream)) {
-                    $base64data = base64_decode($get_sk_izin->stream, true);
-                    //$file_path  = "{$folder}/{$file_name}";
-            
+                //if (!empty($get_sk_izin->stream)) {
+                    //$base64data = base64_decode($get_sk_izin->stream, true);
+                    
                     //Return the number of bytes saved, or false on failure
-                    $result = file_put_contents("D:/berkas/sklo_21/$get_sk_izin->nama", $base64data);
-                }
-                
+                    //$result = file_put_contents("D:/berkas/sklo_21/$get_sk_izin->nama", $base64data);
+                //}
+            //}
+        //}
+
+        //get data file komitmen file
+        $data_komit_file = $this->pdbNew->getTableKomitmenfile();
+        if(!empty($data_komit_file)){
+            foreach($data_komit_file as $dt){
+                if (!empty($dt->stream)) {
+                    
+                    $base64data = base64_decode($dt->stream, true);
+                    
+                    //Return the number of bytes saved, or false on failure
+                    $result = file_put_contents("D:/berkas/komitmen_file/$dt->nama", $base64data);
+                }   
             }
-            
         }
+
+
         
     } 
 

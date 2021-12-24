@@ -46,6 +46,12 @@ class SipppdihatiNewDb extends Model {
         return $result; 
     }
 
+    public function getTableKomitmenfile(){
+        $result = DB::table('p_permohonan_komit_file')
+                    ->get();
+        return $result; 
+    }
+
     public function getTableSkloFile($nama){
         $result = DB::table('p_sk_ulo_file')
                     ->where('nama', $nama)
